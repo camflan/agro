@@ -14,7 +14,7 @@ import re
 log = logging.getLogger('agro.sources.flickr')
 
 # model definition
-class Photo(models.Model):
+class Photo(Entry):
     photo_id    = models.CharField(max_length=200,)
     server      = models.IntegerField(null=True,)
     secret      = models.CharField(max_length=200,null=True,)
@@ -22,12 +22,7 @@ class Photo(models.Model):
     original_secret = models.CharField(max_length=200,null=True,)
     original_format = models.CharField(max_length=4,null=True,)
 
-    photog      = models.CharField(max_length=200, blank=True, null=True, )
-    title       = models.CharField(max_length=200,)
-    description = models.TextField(blank=True, null=True,)
     num_comments= models.IntegerField(blank=True, null=True,)
-
-    tags        = TagField()
 
     taken_at    = models.DateTimeField(null=True,)
     uploaded_at = models.DateTimeField(null=True,)
@@ -43,11 +38,8 @@ class Photo(models.Model):
         return self.title
 
     @property
-    def owner_user(self):
-        return self.photog
-    @property
-    def url(self):
-        return "http://www.flickr.com/photos/%s/%s" % (self.photog, self.photo_id)
+    def photog(self):
+        return self.owner_user
 
     @property
     def format_template(self):
@@ -55,12 +47,6 @@ class Photo(models.Model):
                 "<div class = 'entry photo'><a href='{{ curr_object.url }}'><img src='{{ curr_object.square }}' /> {{ curr_object.title }}</a></div>"
         )
     
-    @property
-    def timestamp(self, sort_by="uploaded"):
-        if not sort_by == "uploaded":
-            return self.taken_at
-        return self.uploaded_at
-
     # image urls
     @property
     def image(self):
@@ -104,7 +90,6 @@ def retrieve(force, **args):
     """ this is how we will handle photos """
 
     username, user_id = args['account']
-
     flickr = FClient(args['api_key'])
 
     last_update = datetime.datetime.fromtimestamp(0)
@@ -214,11 +199,14 @@ def _handle_photo(flickr_obj, photo, user):
 
     photo_obj, created = Photo.objects.get_or_create(
         photo_id    = photo_id,
-        photog      = smart_unicode(user),
+        owner_user  = smart_unicode(user),
         uploaded_at = datetime.datetime.fromtimestamp(utils.safeint(info["dates"]["posted"])),
+        timestamp = datetime.datetime.fromtimestamp(utils.safeint(info["dates"]["posted"])),
+        source_type = "photo"
     )
 
     try:
+        photo_obj.url               = "http://www.flickr.com/photos/%s/%s" % (photo_obj.owner_user, photo_obj.photo_id)
         photo_obj.secret            = secret
         photo_obj.server            = utils.safeint(smart_unicode(photo['server']))
         photo_obj.original_secret   = smart_unicode(info['originalsecret'])
@@ -231,9 +219,6 @@ def _handle_photo(flickr_obj, photo, user):
         photo_obj.save()
     except Exception, e:
         log.error('%s' % e)
-
-    #log.debug('tags: %s', photo.tags)
-    entry = Entry.objects.create_or_update_entry(instance=photo_obj, tags=photo_obj.tags)
 
 admin.site.register(Photo, PhotoAdmin)
 

@@ -9,27 +9,28 @@ import logging
 log = logging.getLogger('agro.sources.twitter')
 
 # model definition
-class Tweet(models.Model):
-    tweet_id    = models.IntegerField(null=True, blank=True, )
-    text        = models.CharField(max_length=200, null=True, blank=True, )
-    tweeter     = models.CharField(max_length=200, null=True, blank=True, )
-    timestamp   = models.DateTimeField()
+class Tweet(Entry):
+    tweet_id    = models.IntegerField(null=True, blank=True, help_text="This is the id assigned to each tweet by twitter." )
     source      = models.TextField(blank=True, null=True, )
 
     class Meta:
-        app_label = "agro"
         ordering = ['-tweet_id',]
+        app_label = "agro"
+
+    def __repr__(self):
+        return "<Tweet id:%s>" % self.tweet_id
 
     def __unicode__(self):
         return u"Tweet: %s" % self.text
 
+    # Here are a couple of properties to keep this backwards-compatible.
     @property
-    def owner_user(self):
-        return self.tweeter
+    def tweeter(self):
+        return self.owner_user
 
     @property
-    def url(self):
-        return "http://twitter.com/%s/statuses/%s" % (self.tweeter, self.tweet_id)
+    def text(self):
+        return self.title
 
     @property
     def format_template(self):
@@ -42,7 +43,6 @@ class TweetAdmin(admin.ModelAdmin):
 # retrieve function, this is how we handle items
 def retrieve(force, **args):
     """ this is how we will create new items/tweets """
-    # globals
     username, password = args['account'], None
     if isinstance(username, tuple):
         username, password = username
@@ -54,10 +54,9 @@ def retrieve(force, **args):
         log.info("Forcing update of all tweets available.")
     else:
         try:
-            last_id = Tweet.objects.filter(tweeter=username).order_by('-tweet_id')[0].tweet_id
+            last_id = Tweet.objects.filter(owner_user=username).order_by('-tweet_id')[0].tweet_id
         except Exception, e:
             log.debug('%s', e)
-
     log.debug("Last id processed: %s", last_id)
 
     if not password:
@@ -72,15 +71,20 @@ def retrieve(force, **args):
     for t in tweets:
         if t['id'] > last_id:
             log.info("Working with %s.", t['id'])
+
+            tweet_text = smart_unicode(t['text'])
+            owner_user = smart_unicode(t['user']['screen_name'])
+
             tweet, created = Tweet.objects.get_or_create(
                     tweet_id    = t['id'], 
-                    text        = smart_unicode(t['text']), 
-                    tweeter     = smart_unicode(t['user']['screen_name']), 
+                    title       = tweet_text,
+                    owner_user  = owner_user,
                     timestamp   = utils.parsedate(t['created_at']),
                     source      = smart_unicode(t['source']),
+                    url = "http://twitter.com/%s/statuses/%s" % (owner_user, t['id']),
+                    source_type = "tweet"
             )
-
-            entry = Entry.objects.create_or_update_entry(instance=tweet, tags=_tweet_to_tags(tweet.text))
+            tweet.tags = _tweet_to_tags(tweet_text)
         else:
             log.warning("No more tweets, stopping...")
             break

@@ -23,7 +23,7 @@ if element_tree is None:
     raise ImportError("No ElementTree found.")
 log.debug("Using specified etree module: %s" % element_tree)
 
-def import_source_modules(source_list=settings.SOURCE_LIST, class_name=''):
+def import_source_modules(source_list=settings.AGRO_SETTINGS['source_list'], class_name=''):
     sources = []
     for source in source_list:
         try:

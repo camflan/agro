@@ -10,23 +10,11 @@ import logging
 log = logging.getLogger('agro.sources.delicious')
 
 # model definition
-class Bookmark(models.Model):
-    title       = models.CharField(max_length=200,)
-    timestamp   = models.DateTimeField()
-    url         = models.CharField(max_length=200,)
-    username    = models.CharField(max_length=200,)
-    description = models.TextField(null=True, blank=True, )
-
-    tags        = TagField()
-
+class Bookmark(Entry):
     class Meta:
         app_label = "agro"
         ordering = ['-timestamp']
 
-    @property
-    def owner_user(self):
-        return self.username
-    
     @property
     def format_template(self):
         return Template("<div class='entry bookmark'><a href='{{ curr_object.url }}'>{{ curr_object.title }}</a></div>")
@@ -48,7 +36,7 @@ def retrieve(force, **args):
         log.info("Forcing update of all bookmarks available.")
     else:
         try:
-            last_update = Bookmark.objects.filter(username=username).order_by('-timestamp')[0].timestamp
+            last_update = Bookmark.objects.filter(owner_user=username).order_by('-timestamp')[0].timestamp
         except Exception, e:
             log.debug('%s', e)
 
@@ -70,13 +58,10 @@ def _handle_bookmark(mark, dt, username):
         timestamp   = dt,
         url         = mark['u'],
         title       = mark['d'],
-        username    = username,
+        owner_user  = username,
+        description = mark['n'],
+        source_type = 'bookmark'
     )
-
     bookmark.tags        = tags
-    bookmark.description = mark['n']
-    bookmark.save()
-
-    entry = Entry.objects.create_or_update_entry(instance=bookmark, tags=tags)
 
 admin.site.register(Bookmark, BookmarkAdmin)

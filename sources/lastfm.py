@@ -10,8 +10,7 @@ import logging
 log = logging.getLogger('agro.sources.lastfm')
 
 # model definition
-class Song(models.Model):
-    title       = models.CharField(max_length=200,)
+class Song(Entry):
     artist      = models.CharField(max_length=200,)
     album       = models.CharField(max_length=200,)
 
@@ -20,24 +19,19 @@ class Song(models.Model):
     album_mbid  = models.CharField(max_length=200,)
 
     streamable  = models.BooleanField(default=False,)
-    url         = models.URLField(verify_exists=False,)
     timestamp   = models.DateTimeField()
 
     small_image = models.URLField(verify_exists=False,)
     med_image   = models.URLField(verify_exists=False,)
     large_image = models.URLField(verify_exists=False,)
 
-    username    = models.CharField(max_length=200,)
-    tags        = TagField()
-
     class Meta:
         app_label = "agro"
         ordering = ['-timestamp']
-        unique_together = ('title', 'timestamp')
 
     @property
-    def owner_user(self):
-        return self.username
+    def username(self):
+        return self.owner_user
     
     @property
     def format_template(self):
@@ -47,7 +41,7 @@ class Song(models.Model):
 # admin definition
 class SongAdmin(admin.ModelAdmin):
     list_display = ('artist', 'album', 'title', 'timestamp')
-    list_filter = ('streamable', 'username',)
+    list_filter = ('streamable', 'owner_user',)
     date_hierarchy = 'timestamp'
 
 # retrieve function
@@ -105,7 +99,7 @@ def _handle_song(song, dt, user_name):
         title       = song.find('name').text or '',
         artist      = artist.text or '',
         timestamp   = dt,
-        username    = user_name,
+        owner_user  = user_name,
         defaults=   {
             album: album.text or '',
             song_mbid: song.find('mbid').text or '',
@@ -118,10 +112,5 @@ def _handle_song(song, dt, user_name):
             large_image: imageset['large'] or '',
         }
     )
-
-    entry = Entry.objects.create_or_update_entry(instance=song)
-
-def _get_tags_for_song():
-    pass
 
 admin.site.register(Song, SongAdmin)
