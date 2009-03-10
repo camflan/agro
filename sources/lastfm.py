@@ -1,33 +1,37 @@
-from django.db import models
-from django.contrib import admin
-from agro.sources import utils
-from agro.models import Entry
-from django.template import Template
-from tagging.fields import TagField
 import datetime
 import logging
+
+from django.db import models
+from django.db import transaction
+from django.contrib import admin
+from django.template import Template
+from django.utils.encoding import smart_unicode
+
+from agro.sources import utils
+from agro.models import Entry
+
+from tagging.fields import TagField
 
 log = logging.getLogger('agro.sources.lastfm')
 
 # model definition
 class Song(Entry):
-    artist      = models.CharField(max_length=200,)
-    album       = models.CharField(max_length=200,)
-
-    song_mbid   = models.CharField(max_length=200,)
-    artist_mbid = models.CharField(max_length=200,)
-    album_mbid  = models.CharField(max_length=200,)
-
+    artist      = models.CharField(max_length=200, blank=True, null=True)
+    album       = models.CharField(max_length=200, blank=True, null=True)
+    song_mbid   = models.CharField(max_length=200, blank=True, null=True,)
+    artist_mbid = models.CharField(max_length=200, blank=True, null=True,)
+    album_mbid  = models.CharField(max_length=200, blank=True, null=True,)
     streamable  = models.BooleanField(default=False,)
-    timestamp   = models.DateTimeField()
-
-    small_image = models.URLField(verify_exists=False,)
-    med_image   = models.URLField(verify_exists=False,)
-    large_image = models.URLField(verify_exists=False,)
+    small_image = models.CharField(max_length=200, blank=True, null=True)
+    med_image   = models.CharField(max_length=200, blank=True, null=True)
+    large_image = models.CharField(max_length=200, blank=True, null=True)
 
     class Meta:
         app_label = "agro"
         ordering = ['-timestamp']
+
+    def __unicode__(self):
+        return self.title
 
     @property
     def username(self):
@@ -45,11 +49,11 @@ class SongAdmin(admin.ModelAdmin):
     date_hierarchy = 'timestamp'
 
 # retrieve function
+@transaction.commit_on_success
 def retrieve(force, **args):
     username        = args['account']
     api_key,secret  = args['api_key']
-    limit = "1000"
-    url             = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=%s&api_key=%s&limit=%s" % (username, api_key, limit)
+    url             = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=%s&api_key=%s&limit=%s" % (username, api_key, 1000)
     song_resp       = utils.get_remote_data(url)
 
     last_update = datetime.datetime.fromtimestamp(0)
@@ -57,7 +61,7 @@ def retrieve(force, **args):
         log.info("Forcing update of all available songs.")
     else:
         try:
-            last_update = Song.objects.filter(username=username).order_by('-timestamp')[0].timestamp
+            last_update = Song.objects.filter(owner_user=username)[0].timestamp
         except Exception, e:
             log.debug("%s", e)
 
@@ -65,7 +69,6 @@ def retrieve(force, **args):
         log.error('Last.fm responded with an error: %s', song_resp.get('status'))
         return
 
-    lastfm_user = song_resp[0].get('user')
     songs = song_resp[0].getchildren()
     user_name = song_resp[0].get('user')
 
@@ -87,30 +90,34 @@ def retrieve(force, **args):
 def _handle_song(song, dt, user_name):
     log.info("working with song => %s" % dt)
 
+    track = song.find('name')
     artist = song.find('artist')
-    album  = song.find('album')
-    images = song.findall('image')
+    album = song.find('album')
+
     imageset = {}
+    images = song.findall('image')
 
     for image in images:
         imageset[image.get('size')] = image.text
 
-    song, created = Song.objects.get_or_create(
-        title       = song.find('name').text or '',
-        artist      = artist.text or '',
-        timestamp   = dt,
-        owner_user  = user_name,
-        defaults=   {
-            album: album.text or '',
-            song_mbid: song.find('mbid').text or '',
-            artist_mbid: artist.get('mbid') or '',
-            album_mbid: album.get('mbid') or '',
-            url: song.find('url').text or '',
-            streamable: song.find('streamable').text or 0,
-            small_image: imageset['small'] or '',
-            med_image: imageset['medium'] or '',
-            large_image: imageset['large'] or '',
-        }
-    )
+    try:
+        s, created = Song.objects.get_or_create(
+            title = smart_unicode(track.text),
+            artist = smart_unicode(artist.text), 
+            timestamp = dt,
+            album = smart_unicode(album.text),
+            artist_mbid = smart_unicode(artist.get('mbid')),
+            album_mbid = smart_unicode(album.get('mbid')),
+            url = smart_unicode(song.find('url').text),
+            streamable = smart_unicode(song.find('streamable').text),
+            small_image = smart_unicode(imageset.get('small', '')),
+            med_image = smart_unicode(imageset.get('medium', '')),
+            large_image = smart_unicode(imageset.get('large', '')),
+            owner_user = smart_unicode(user_name),
+            source_type = "song",
+        )
+    except Exception, e:
+        print e
+        raise
 
 admin.site.register(Song, SongAdmin)

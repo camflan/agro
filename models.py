@@ -1,17 +1,16 @@
 from django.db import models
-from django.contrib.contenttypes.models import ContentType
 
 from agro.managers import EntryManager
 from agro.sources import import_source_modules
 from tagging.fields import TagField, Tag
 
 class Entry(models.Model):
-    title           = models.CharField(max_length=200, help_text="Main text, or Title, of your entry.")
-    timestamp       = models.DateTimeField(help_text="Timestamp for your entry. This is how we pull items out of the DB.")
-    description     = models.CharField(max_length=200, help_text="Description, or subtext, of your entry.")
-    owner_user      = models.CharField(max_length=200, help_text="Here we store the username used for the webservice, for this entry.")
-    url             = models.URLField(verify_exists=False, help_text="URL back to the original item.")
-    source_type     = models.CharField(max_length=200, help_text="Type of entry.")
+    title           = models.CharField(max_length=200, help_text="Main text, or Title, of your entry.", blank=True)
+    timestamp       = models.DateTimeField(help_text="Timestamp for your entry. This is how we pull items out of the DB.", blank=True)
+    description     = models.TextField(help_text="Description, or subtext, of your entry.", blank=True)
+    owner_user      = models.CharField(max_length=200, help_text="Here we store the username used for the webservice, for this entry.", blank=True)
+    url             = models.URLField(verify_exists=False, help_text="URL back to the original item.", blank=True)
+    source_type     = models.CharField(max_length=200, help_text="Type of entry.", blank=True)
 
     objects         = EntryManager()
     tags            = TagField()
@@ -21,7 +20,7 @@ class Entry(models.Model):
         ordering = ['-timestamp']
         app_label = "agro"
         verbose_name_plural = "entries"
-        unique_together = ('source_type', 'title', 'timestamp')
+        unique_together = [('title', 'timestamp', 'source_type'),]
 
     def __unicode__(self):
         return u"%s" % self.title

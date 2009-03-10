@@ -27,12 +27,19 @@ class BookmarkAdmin(admin.ModelAdmin):
 
 # retrieve function
 def retrieve(force, **args):
-    username = args['account']
+    if isinstance(args['account'], tuple) and len(args['account']) == 2:
+        username, password = args['account']
+    else:
+        username = args['account']
+        password = False
     url      = "http://feeds.delicious.com/v2/json/%s" % username
-    marks = utils.get_remote_data(url, rformat='json')
+    rformat = 'json'
 
     last_update = datetime.datetime.fromtimestamp(0)
     if force:
+        if password:
+            url = "https://api.del.icio.us/v1/posts/all"
+            rformat = "rss"
         log.info("Forcing update of all bookmarks available.")
     else:
         try:
@@ -40,8 +47,16 @@ def retrieve(force, **args):
         except Exception, e:
             log.debug('%s', e)
 
+    if force and password:
+        marks = utils.get_remote_data(url, rformat=rformat, username=username, password=password)
+    else:
+        marks = utils.get_remote_data(url, rformat=rformat)
+
     if marks:
         for mark in marks:
+            if password and force:
+                _handle_rss_bookmark(mark, username)
+                continue
             dt = utils.parsedate(mark['dt']) 
             if dt > last_update:
                 _handle_bookmark(mark, dt, username)
@@ -63,5 +78,17 @@ def _handle_bookmark(mark, dt, username):
         source_type = 'bookmark'
     )
     bookmark.tags        = tags
+
+def _handle_rss_bookmark(mark, username):
+    log.info("working with bookmark => %s" % mark.get('extended'))
+
+    bookmark, created = Bookmark.objects.get_or_create(
+        description = mark.get('extended'),
+        url = mark.get("href"),
+        title = mark.get("description"),
+        timestamp = utils.parsedate(mark.get('time'))
+    )
+    bookmark.tags = mark.get("tag")
+
 
 admin.site.register(Bookmark, BookmarkAdmin)

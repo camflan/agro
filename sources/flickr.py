@@ -1,15 +1,18 @@
-from django.db import models
-from django.contrib import admin
-from agro.sources import utils
-from agro.models import Entry
-from tagging.fields import TagField
-from django.utils.encoding import smart_unicode
-from django.template import Template
 import datetime
 import urllib
 import logging
 import md5
 import re
+
+from django.db import models
+from django.contrib import admin
+from django.utils.encoding import smart_unicode
+from django.template import Template
+
+from agro.sources import utils
+from agro.models import Entry
+
+from tagging.fields import TagField
 
 log = logging.getLogger('agro.sources.flickr')
 
@@ -43,9 +46,7 @@ class Photo(Entry):
 
     @property
     def format_template(self):
-        return Template(
-                "<div class = 'entry photo'><a href='{{ curr_object.url }}'><img src='{{ curr_object.square }}' /> {{ curr_object.title }}</a></div>"
-        )
+        return Template("<div class = 'entry photo'><a href='{{ curr_object.url }}'><img src='{{ curr_object.square }}' /> {{ curr_object.title }}</a></div>")
     
     # image urls
     @property
@@ -97,7 +98,7 @@ def retrieve(force, **args):
         log.info("Forcing update of all available photos")
     else:
         try:
-            last_update = Photo.objects.filter(photog=username).order_by('-uploaded_at')[0].uploaded_at
+            last_update = Photo.objects.filter(owner_user=username).order_by('-uploaded_at')[0].uploaded_at
         except Exception, e:
             log.debug("%s", e)
 

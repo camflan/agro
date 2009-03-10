@@ -10,12 +10,12 @@ log = logging.getLogger('agro.retrieve')
 
 def retrieve_data_updates(opts=None, args=None):
     log.info('starting to update sources')
-    sources = settings.SOURCE_LIST
+    sources = settings.AGRO_SETTINGS['source_list']
 
     if args and len(args) > 1:
         sources = args[1:]
         for source in sources:
-            if source not in settings.SOURCE_LIST:
+            if source not in settings.AGRO_SETTINGS['source_list']:
                 log.warning('%s is not a valid source, removing from update list.', source)
                 sources.remove(source)
 
@@ -31,11 +31,11 @@ def retrieve_data_updates(opts=None, args=None):
 
         base_name = s.__name__[s.__name__.rfind('.')+1:]
 
-        if base_name in settings.AGRO_API_KEYS.keys():
-            args['api_key'] = settings.AGRO_API_KEYS[base_name]
+        if base_name in settings.AGRO_SETTINGS['api_keys'].keys():
+            args['api_key'] = settings.AGRO_SETTINGS['api_keys'][base_name]
 
-        if base_name in settings.AGRO_ACCOUNTS.keys():
-            account = settings.AGRO_ACCOUNTS[base_name]
+        if base_name in settings.AGRO_SETTINGS['accounts'].keys():
+            account = settings.AGRO_SETTINGS['accounts'][base_name]
         else:
             log.error('no credentials for %s', base_name)
             continue
@@ -56,7 +56,7 @@ def retrieve_data_updates(opts=None, args=None):
 
 def _print_sources():
     print 'your sources:'
-    for s in settings.SOURCE_LIST:
+    for s in settings.SETTINGS['source_list']:
         print ' -', s
 
 if __name__ == '__main__':

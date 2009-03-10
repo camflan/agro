@@ -74,6 +74,7 @@ def retrieve(force, **args):
 
             tweet_text = smart_unicode(t['text'])
             owner_user = smart_unicode(t['user']['screen_name'])
+            url = "http://twitter.com/%s/statuses/%s" % (owner_user, t['id'])
 
             tweet, created = Tweet.objects.get_or_create(
                     tweet_id    = t['id'], 
@@ -81,10 +82,14 @@ def retrieve(force, **args):
                     owner_user  = owner_user,
                     timestamp   = utils.parsedate(t['created_at']),
                     source      = smart_unicode(t['source']),
-                    url = "http://twitter.com/%s/statuses/%s" % (owner_user, t['id']),
+                    url = url,
                     source_type = "tweet"
             )
-            tweet.tags = _tweet_to_tags(tweet_text)
+            try:
+                tweet.tags = _tweet_to_tags(tweet_text)
+            except Exception, e:
+                print e
+                pass
         else:
             log.warning("No more tweets, stopping...")
             break
@@ -93,7 +98,7 @@ def _tweet_to_tags(text):
     tags = []
     for x in text.lower().split():
         if x not in utils.STOPWORDS:
-            tags.append(x.strip('`.,!#$%^&?|<>[]{}'))
+            tags.append(x.strip('`".,!#$%^&?|<>[]{}'))
     return " ".join(tags)
     
 
