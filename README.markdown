@@ -13,8 +13,8 @@ Twitter, flickr, last.fm and delicious.
 INSTALL
 -------
 
-Check the [http://code.google.com/p/agroapp/wiki/Settings settings] wiki page on how to 'install' agro.
-Default sources require [http://code.google.com/p/django-tagging/ django-tagging].
+Check the [settings](http://code.google.com/p/agroapp/wiki/Settings) wiki page on how to 'install' agro.
+[Default sources require](http://code.google.com/p/django-tagging/).
 
 ************
 
@@ -24,14 +24,15 @@ CHANGELOG
 ----------
 
 Can now use signed calls to get non-public data, original_secret, etc from non-CC licensed photos!
-Set up an API_Key, and [http://camronflanders.com/agro/flickr_token_gen/ visit this page.]
+Set up an API_Key, and [visit this page.](http://camronflanders.com/agro/flickr_token_gen/)
 
 08/19/2008
 ----------
 
 Command line arguments!
 
-The ability to update only certain sources was added a while back, but now we can force update.  [http://code.google.com/p/agroapp/wiki/retrievePy see the wiki page]
+The ability to update only certain sources was added a while back, but now we can force update.  
+[see the wiki page](http://code.google.com/p/agroapp/wiki/retrievePy "retrievePy")
 
 08/07/2008
 ----------
@@ -43,8 +44,9 @@ Can now aggregate for multiple accounts on every plugin!
 
 Template tags added.
 2 template tags have been added.
-[http://code.google.com/p/agroapp/wiki/TemplateTags see wiki page]
+[see the wiki page.](http://code.google.com/p/agroapp/wiki/TemplateTags)
 
 *************
 
 _agro is developed on django trunk and is inspired by jellyroll (from Jacob Kaplan-Moss)._
+
