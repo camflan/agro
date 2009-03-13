@@ -90,4 +90,4 @@ def logout_and_close_mailbox(M):
     M.close()
     M.logout()
 
-admin.site.register(Photo, PhotoAdmin)
+admin.site.register(DroppedPin, DroppedPinAdmin)
