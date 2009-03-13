@@ -66,7 +66,7 @@ def retrieve(force, **args):
 
     last_update = datetime.datetime.fromtimestamp(0)
     if force: 
-        log.info("Forcing update of all available emails from %s on %s" % (mailbox, server))
+        log.info("Forcing update of all available emails from %s on %s" % (mailbox, host))
     else:
         try:
             last_update = DroppedPin.objects.filter(owner_user=username).order_by('timestamp')[0]
@@ -75,7 +75,7 @@ def retrieve(force, **args):
 
     log.debug('last update: %s', last_update)
 
-    M = imaplib.IMAP4(server)
+    M = imaplib.IMAP4(host)
     M.login(username, password)
     count = M.select(mailbox)   #count is number of emails in the mailbox
 
