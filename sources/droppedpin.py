@@ -36,8 +36,8 @@ class DroppedPin(Entry):
         return Template("<div class='entry location'><p>{{ curr_object.latitude }}, {{ curr_object.longitude }}</p></div>")
 
     @property
-    def has_location_information:
-        if state and city:
+    def has_location_information(self):
+        if self.state and self.city:
             return True
         return False
 
