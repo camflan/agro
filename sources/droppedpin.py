@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.template import Template
 
 from agro.models import Entry
+from agro.sources import utils
 
 #model def
 class DroppedPin(Entry):
@@ -27,6 +28,8 @@ class DroppedPin(Entry):
     class Meta:
         ordering = ['created',]
         app_label = "agro"
+        verbose_name = "Dropped Pin"
+        verbose_name_plural = "Dropped Pins"
 
     def __unicode__(self):
         if self.has_location_information:
@@ -86,3 +89,5 @@ def handle_email(M, num):
 def logout_and_close_mailbox(M):
     M.close()
     M.logout()
+
+admin.site.register(Photo, PhotoAdmin)
