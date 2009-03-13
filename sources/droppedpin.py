@@ -9,6 +9,8 @@ from django.template import Template
 from agro.models import Entry
 from agro.sources import utils
 
+log = logging.getLogger('agro.sources.flickr')
+
 #model def
 class DroppedPin(Entry):
     nickname = models.CharField(max_length=200,)
