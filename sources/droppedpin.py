@@ -1,9 +1,10 @@
+import imaplib
+
 from django.db import models
 from django.contrib import admin
 from django.template import Template
 
 from agro.models import Entry
-
 
 #model def
 class DroppedPin(Entry):
@@ -42,7 +43,7 @@ class DroppedPin(Entry):
         return False
 
 
-class DroppedPinAdmin(admin.modelAdmin):
+class DroppedPinAdmin(admin.ModelAdmin):
     list_display = ('nickname', 'city', 'state', 'latitude', 'longitude',)
     date_hierarchy = 'created'
 
