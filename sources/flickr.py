@@ -46,7 +46,7 @@ class Photo(Entry):
 
     @property
     def format_template(self):
-        return Template("<div class = 'entry photo'><a href='{{ curr_object.url }}'><img src='{{ curr_object.square }}' /> {{ curr_object.title }}</a></div>")
+        return Template("<div class='entry photo'><a href='{{ curr_object.url }}'><img src='{{ curr_object.square }}' /> {{ curr_object.title }}</a></div>")
     
     # image urls
     @property
