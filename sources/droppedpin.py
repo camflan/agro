@@ -1,15 +1,70 @@
-import imaplib
 import datetime
+import imaplib
 import logging
+import pytz
+import re
+import urllib
 
+from django.conf import settings
 from django.db import models
 from django.contrib import admin
 from django.template import Template
+from django.template.defaultfilters import slugify
+from django.utils.encoding import smart_unicode
 
 from agro.models import Entry
 from agro.sources import utils
 
 log = logging.getLogger('agro.sources.flickr')
+
+utc = pytz.utc
+our_timezone = pytz.timezone(settings.TIME_ZONE)
+
+BASE_GEONAMES_URL = "http://ws.geonames.org/findNearbyPlaceNameJSON?"
+
+DATE_PATTERN    = r'''
+                    
+                    Date:\s{0,5}\w{3},\s        #     find the beginning of the delivery date string, including the day of the week.
+                    (\d{1,2})                   # (1) date: 1-31
+                    \s                          #     space
+                    (\w{3})                     # (2) month: 3 letter abbrev
+                    \s                          #     space
+                    (\d{2,4})                   # (3) year: 2 or 4 digit
+                    \s                          #     space
+                    (                           # (4) we capture the entire time as a string, might as well.
+                        (\d{1,2})               # (5) hour: 0-24
+                        :                       #     time separator
+                        (\d{1,2})               # (6) minutes: 0-59
+                        :                       #     time separator
+                        (\d{1,2})               # (7) seconds: 0-59
+                    )
+                    \s                          #     space
+                    (-)                         # (8) plus or minus from UTC/GMT
+                    (\d{4})                     # (9) time offset
+
+                  '''
+SUBJECT_PATTERN = r'''
+                    
+                    \n                        # lessen the chance of picking up something from the body.
+                    Subject:\s*               # find our line
+                    ([^\r]*)                  # grab anything up to a new line
+                    \r?\n                     # end of line, go home.
+                        
+                  '''
+
+GMAPS_LL_PATTERN= r'''
+
+                   https?://maps.google.com/maps\?f=q\&q=   # base URL
+                   (-?[\d.]{4,10})                          # latitude (comes first in URL)
+                   ,                                        # comma seperated
+                   (-?[\d.]{4,10})                          # longitude (comes first in URL)
+                   .*\s                                     # rest of the URL
+
+                  '''
+
+
+MONTH_TO_NUM = {'jan':1, 'feb':2, 'mar':3, 'apr':4, 'may':5, 'jun':6, 'jul':7, 'aug':8, 'sep':9, 'oct':10, 'nov':11, 'dec':12,}
+
 
 #model def
 class DroppedPin(Entry):
@@ -19,21 +74,18 @@ class DroppedPin(Entry):
     longitude = models.FloatField()
     latitude = models.FloatField()
 
-    created = models.DateTimeField(unique=True,)
     imported = models.DateTimeField(auto_now_add=True,)
 
-    country = models.CharField(max_length=200,)
-    state = models.CharField(max_length=200,)
-    city = models.CharField(max_length=200,)
-    zip = models.IntegerField()
-    neighborhood = models.CharField(max_length=200,)
-    address = models.CharField(max_length=200,)
+    country = models.CharField(max_length=200, null=True, blank=True)
+    state = models.CharField(max_length=200, null=True, blank=True)
+    city = models.CharField(max_length=200, null=True, blank=True)
+    zip = models.IntegerField(null=True, blank=True)
+    neighborhood = models.CharField(max_length=200, null=True, blank=True)
+    address = models.CharField(max_length=200, null=True, blank=True)
 
     class Meta:
-        ordering = ['created',]
+        ordering = ['timestamp',]
         app_label = "agro"
-        verbose_name = "Dropped Pin"
-        verbose_name_plural = "Dropped Pins"
 
     def __unicode__(self):
         if self.has_location_information:
@@ -52,7 +104,7 @@ class DroppedPin(Entry):
 
 class DroppedPinAdmin(admin.ModelAdmin):
     list_display = ('nickname', 'city', 'state', 'latitude', 'longitude',)
-    date_hierarchy = 'created'
+    date_hierarchy = 'timestamp'
 
 
 def retrieve(force, **args):
@@ -76,21 +128,100 @@ def retrieve(force, **args):
     log.debug('last update: %s', last_update)
 
     M = imaplib.IMAP4(host)
-    M.login(username, password)
-    count = M.select(mailbox)   #count is number of emails in the mailbox
+    status, message = M.login(username, password)
+    if not status == 'OK':
+        log.error("Unable to login to %s using %s" % (host, username))
+    status, count = M.select(mailbox)   # count is number of emails in the mailbox
+    if not status == 'OK':
+        log.error("Unable to open %s on %s for %s" % (mailbox, host, username))
+
+    if count[0] == '0':
+        log.info("no emails to process, exiting.")
+        logout_and_close_mailbox(M)
+        return
 
     typ, data = M.search(None, 'ALL')
 
     for num in data[0].split():
-        handle_email(M, num)
+        handle_email(M, num, username)
+        if delete_on_import:
+            M.store(num, '+FLAGS', '\\Deleted')
 
     logout_and_close_mailbox(M)
 
-def handle_email(M, num):
+def handle_email(M, num, user):
     typ, data = M.fetch(num, '(RFC822)')
-    print 'Message %s\n\n%s\n\n' % (num, data)
+    flags = data[1]
+    message = data[0][1]
+
+    subject_compiled_pattern = re.compile(SUBJECT_PATTERN, re.VERBOSE)
+    lat_long_compiled_pattern = re.compile(GMAPS_LL_PATTERN, re.VERBOSE)
+    date_compiled_pattern = re.compile(DATE_PATTERN, re.VERBOSE)
+
+    subject = re.search(subject_compiled_pattern, message)
+    delivery_date = re.search(date_compiled_pattern, message)
+    lat_long = re.search(lat_long_compiled_pattern, message)
+
+    subject = subject.group(1).strip()
+    lat,lng = float(lat_long.group(1)), float(lat_long.group(2))
+
+    log.info("working with location: %s (%f, %f)" % (subject, lat, lng))
+
+    M.noop()  # keep connection alive
+
+    pin_date    = int(delivery_date.group(1))
+    pin_month   = MONTH_TO_NUM[delivery_date.group(2).lower()]
+    pin_year    = int(delivery_date.group(3))
+    pin_hour    = int(delivery_date.group(5))
+    pin_minute  = int(delivery_date.group(6))
+    pin_seconds = int(delivery_date.group(7))
+    pin_plusminus = delivery_date.group(8)
+    pin_tzoffset = delivery_date.group(9)
+
+    if pin_plusminus == '-':
+        pin_hour = pin_hour + int(pin_tzoffset[0:2])
+    else:
+        pin_hour = pin_hour - int(pin_tzoffset[0:2])
+
+    delivery_datetime = datetime.datetime(pin_year, pin_month, pin_date, pin_hour, pin_minute, pin_seconds, 0, tzinfo=utc)
+    our_delivery_datetime = delivery_datetime.astimezone(our_timezone)
+
+
+    dpobj, created = DroppedPin.objects.get_or_create(
+        nickname = subject,
+        slug = slugify(subject),
+        owner_user = smart_unicode(user),
+        timestamp = our_delivery_datetime,
+        longitude = lng,
+        latitude = lat,
+        source_type = "droppedpin"
+    )
+
+    reverse_geocode(dpobj)
+
+
+def reverse_geocode(dpobj):
+    kwargs = {}
+    kwargs['lat'] = dpobj.latitude
+    kwargs['lng'] = dpobj.longitude
+    
+    for k,v in kwargs.iteritems():
+        kwargs[k] = v
+
+    res = utils.get_remote_data(BASE_GEONAMES_URL + urllib.urlencode(kwargs), rformat='json')
+
+    if res.get("stat", "") == "fail":
+        log.error("geonames failed.")
+        log.error("%s" % res.get("stat"))
+        return False
+
+    dpobj.city = res['geonames'][0]['name']
+    dpobj.state = res['geonames'][0]['adminCode1']
+    dpobj.country = res['geonames'][0]['countryCode']
+    dpobj.save()
 
 def logout_and_close_mailbox(M):
+    M.expunge()
     M.close()
     M.logout()
 
