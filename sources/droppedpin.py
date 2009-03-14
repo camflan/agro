@@ -110,18 +110,20 @@ class DroppedPin(Entry):
         kwargs = {}
 
         try:
-            map_api = settings.GMAPS_API_KEY
+            maps_api = settings.GMAPS_API_KEY
         except Exception, e:
             log.error("No google maps api defined (settings.GMAPS_API_KEY).")
+            return False
 
         if not letter:
             letter = self.nickname[0].lower()
             color = color + letter
 
-        kwargs['center'] = self.coordinates
         kwargs['key'] = map_api
+        kwargs['center'] = self.coordinates
         kwargs['size'] = size
-        kwargs['maptype'] = type
+        if type:
+            kwargs['maptype'] = type
         kwargs['markers'] = "%s,%s,%s" % (self.latitude, self.longitude, color)
 
         return BASE_STATIC_MAP_URL + urllib.urlencode(kwargs)
