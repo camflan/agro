@@ -106,7 +106,8 @@ class DroppedPin(Entry):
     def coordinates(self):
         return u"%f,%f" % (self.latitude, self.longitude)
 
-    def static_map(self, letter, dimensions="512x512", type="", color='blue'):
+    def static_map(self, letter=None, size="512x512", type=None color='blue'):
+        kwargs = {}
 
         try:
             map_api = settings.GMAPS_API_KEY
@@ -114,8 +115,14 @@ class DroppedPin(Entry):
             log.error("No google maps api defined (settings.GMAPS_API_KEY).")
 
         if not letter:
-            letter = self.nickname[0].upper()
+            letter = self.nickname[0].lower()
             color = color + letter
+
+        kwargs['center'] = self.coordinates
+        kwargs['key'] = map_api
+        kwargs['size'] = size
+        kwargs['maptype'] = type
+        kwargs['markers'] = "%s,%s,%s" % (self.latitude, self.longitude, color)
 
         return BASE_STATIC_MAP_URL + urllib.urlencode(kwargs)
 
@@ -223,9 +230,6 @@ def reverse_geocode(dpobj):
     kwargs['lat'] = dpobj.latitude
     kwargs['lng'] = dpobj.longitude
     
-    for k,v in kwargs.iteritems():
-        kwargs[k] = v
-
     res = utils.get_remote_data(BASE_GEONAMES_URL + urllib.urlencode(kwargs), rformat='json')
 
     if res.get("stat", "") == "fail":
