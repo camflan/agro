@@ -21,6 +21,7 @@ utc = pytz.utc
 our_timezone = pytz.timezone(settings.TIME_ZONE)
 
 BASE_GEONAMES_URL = "http://ws.geonames.org/findNearbyPlaceNameJSON?"
+BASE_STATIC_MAP_URL = "http://maps.google.com/staticmap?" 
 
 DATE_PATTERN    = r'''
                     
@@ -100,6 +101,23 @@ class DroppedPin(Entry):
         if self.state and self.city:
             return True
         return False
+
+    @property
+    def coordinates(self):
+        return u"%f,%f" % (self.latitude, self.longitude)
+
+    def static_map(self, letter, dimensions="512x512", type="", color='blue'):
+
+        try:
+            map_api = settings.GMAPS_API_KEY
+        except Exception, e:
+            log.error("No google maps api defined (settings.GMAPS_API_KEY).")
+
+        if not letter:
+            letter = self.nickname[0].upper()
+            color = color + letter
+
+        return BASE_STATIC_MAP_URL + urllib.urlencode(kwargs)
 
 
 class DroppedPinAdmin(admin.ModelAdmin):
