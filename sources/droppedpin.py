@@ -106,7 +106,7 @@ class DroppedPin(Entry):
     def coordinates(self):
         return u"%f,%f" % (self.latitude, self.longitude)
 
-    def static_map(self, letter=None, size="512x512", type=None color='blue'):
+    def static_map(self, letter=None, size="512x512", type=None, color='blue'):
         kwargs = {}
 
         try:
