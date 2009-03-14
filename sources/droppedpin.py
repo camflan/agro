@@ -119,7 +119,7 @@ class DroppedPin(Entry):
             letter = self.nickname[0].lower()
             color = color + letter
 
-        kwargs['key'] = map_api
+        kwargs['key'] = maps_api
         kwargs['center'] = self.coordinates
         kwargs['size'] = size
         if type:
