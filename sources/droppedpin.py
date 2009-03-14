@@ -94,7 +94,7 @@ class DroppedPin(Entry):
 
     @property
     def format_template(self):
-        return Template("<div class='entry location'><p>{{ curr_object.latitude }}, {{ curr_object.longitude }}</p></div>")
+        return Template("<div class='entry location'><img src='{{ curr_object.static_map }}' /><p>{{ curr_object.latitude }}, {{ curr_object.longitude }}</p></div>")
 
     @property
     def has_location_information(self):
