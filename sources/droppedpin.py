@@ -130,9 +130,9 @@ def retrieve(force, **args):
     typ, data = M.search(None, 'ALL')
 
     for num in data[0].split():
-        handle_email(M, num, username)
-#        if delete_on_import:
-#            M.store(num, '+FLAGS', '\\Deleted')
+        success = handle_email(M, num, username)
+        if success and delete_on_import:
+            M.store(num, '+FLAGS', '\\Deleted')
 
     logout_and_close_mailbox(M)
 
@@ -152,6 +152,9 @@ def handle_email(M, num, user):
     lat,lng = float(lat_long.group(1)), float(lat_long.group(2))
 
     address, zip, city, state, country = reverse_geocode(lat, lng)
+
+    if not state:
+        return False
 
     log.info("working with location: %s (%f, %f)" % (subject, lat, lng))
 
@@ -194,6 +197,7 @@ def handle_email(M, num, user):
         country = country,
         source_type = "droppedpin"
     )
+    return True
 
 def logout_and_close_mailbox(M):
     M.expunge()
