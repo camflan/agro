@@ -12,16 +12,19 @@ from django.template import Template
 from django.template.defaultfilters import slugify
 from django.utils.encoding import smart_unicode
 
-from agro.models import Entry
-from agro.sources import utils
+from agro.models import Entry, GeolocatedEntryMixin
+from agro.geo import reverse_geocode
 
-log = logging.getLogger('agro.sources.flickr')
+log = logging.getLogger('agro.sources.droppedpin')
 
 utc = pytz.utc
 our_timezone = pytz.timezone(settings.TIME_ZONE)
 
-BASE_GEONAMES_URL = "http://ws.geonames.org/findNearbyPlaceNameJSON?"
+NEARBY_ADDRESS_GEONAMES_URL = "http://ws.geonames.org/findNearestAddressJSON?"
+
 BASE_STATIC_MAP_URL = "http://maps.google.com/staticmap?" 
+
+DEFAULT_SUBJECT = "Dropped Pin"  # will be removed from name of location, if nothing else, replaced by city/state
 
 DATE_PATTERN    = r'''
                     
@@ -68,25 +71,18 @@ MONTH_TO_NUM = {'jan':1, 'feb':2, 'mar':3, 'apr':4, 'may':5, 'jun':6, 'jul':7, '
 
 
 #model def
-class DroppedPin(Entry):
-    nickname = models.CharField(max_length=200,)
-    slug = models.CharField(max_length=200,)
-
-    longitude = models.FloatField()
-    latitude = models.FloatField()
-
-    imported = models.DateTimeField(auto_now_add=True,)
-
-    country = models.CharField(max_length=200, null=True, blank=True)
-    state = models.CharField(max_length=200, null=True, blank=True)
-    city = models.CharField(max_length=200, null=True, blank=True)
-    zip = models.IntegerField(null=True, blank=True)
-    neighborhood = models.CharField(max_length=200, null=True, blank=True)
-    address = models.CharField(max_length=200, null=True, blank=True)
-
+class DroppedPin(Entry, GeolocatedEntryMixin):
     class Meta:
         ordering = ['timestamp',]
         app_label = "agro"
+
+    def save(self, **kwargs):
+        self.title = self.title.replace(DEFAULT_SUBJECT, "").strip()
+
+        if self.title == '':
+            self.title = "%s" % address
+
+        super(DroppedPin, self).save(**kwargs)
 
     def __unicode__(self):
         if self.has_location_information:
@@ -95,38 +91,6 @@ class DroppedPin(Entry):
     @property
     def format_template(self):
         return Template("<div class='entry location'><img src='{{ curr_object.static_map }}' /><p>{{ curr_object.latitude }}, {{ curr_object.longitude }}</p></div>")
-
-    @property
-    def has_location_information(self):
-        if self.state and self.city:
-            return True
-        return False
-
-    @property
-    def coordinates(self):
-        return u"%f,%f" % (self.latitude, self.longitude)
-
-    def static_map(self, letter=None, size="512x512", type=None, color='blue'):
-        kwargs = {}
-
-        try:
-            maps_api = settings.GMAPS_API_KEY
-        except Exception, e:
-            log.error("No google maps api defined (settings.GMAPS_API_KEY).")
-            return False
-
-        if not letter:
-            letter = self.nickname[0].lower()
-            color = color + letter
-
-        kwargs['key'] = maps_api
-        kwargs['center'] = self.coordinates
-        kwargs['size'] = size
-        if type:
-            kwargs['maptype'] = type
-        kwargs['markers'] = "%s,%s,%s" % (self.latitude, self.longitude, color)
-
-        return BASE_STATIC_MAP_URL + urllib.urlencode(kwargs)
 
 
 class DroppedPinAdmin(admin.ModelAdmin):
@@ -171,15 +135,14 @@ def retrieve(force, **args):
 
     for num in data[0].split():
         handle_email(M, num, username)
-        if delete_on_import:
-            M.store(num, '+FLAGS', '\\Deleted')
+#        if delete_on_import:
+#            M.store(num, '+FLAGS', '\\Deleted')
 
     logout_and_close_mailbox(M)
 
 def handle_email(M, num, user):
     typ, data = M.fetch(num, '(RFC822)')
-    flags = data[1]
-    message = data[0][1]
+    message, flags = data[0][1], data[1]
 
     subject_compiled_pattern = re.compile(SUBJECT_PATTERN, re.VERBOSE)
     lat_long_compiled_pattern = re.compile(GMAPS_LL_PATTERN, re.VERBOSE)
@@ -192,57 +155,49 @@ def handle_email(M, num, user):
     subject = subject.group(1).strip()
     lat,lng = float(lat_long.group(1)), float(lat_long.group(2))
 
+    address, zip, city, state, country = reverse_geocode(lat, lng)
+
     log.info("working with location: %s (%f, %f)" % (subject, lat, lng))
 
     M.noop()  # keep connection alive
 
-    pin_date    = int(delivery_date.group(1))
-    pin_month   = MONTH_TO_NUM[delivery_date.group(2).lower()]
-    pin_year    = int(delivery_date.group(3))
-    pin_hour    = int(delivery_date.group(5))
-    pin_minute  = int(delivery_date.group(6))
-    pin_seconds = int(delivery_date.group(7))
+    pin_date      = int(delivery_date.group(1))
+    pin_month     = MONTH_TO_NUM[delivery_date.group(2).lower()]
+    pin_year      = int(delivery_date.group(3))
+    pin_hour      = int(delivery_date.group(5))
+    pin_minute    = int(delivery_date.group(6))
+    pin_seconds   = int(delivery_date.group(7))
     pin_plusminus = delivery_date.group(8)
-    pin_tzoffset = delivery_date.group(9)
+    pin_tzoffset  = delivery_date.group(9)
 
     if pin_plusminus == '-':
         pin_hour = pin_hour + int(pin_tzoffset[0:2])
     else:
         pin_hour = pin_hour - int(pin_tzoffset[0:2])
 
-    delivery_datetime = datetime.datetime(pin_year, pin_month, pin_date, pin_hour, pin_minute, pin_seconds, 0, tzinfo=utc)
+    delivery_datetime = datetime.datetime(pin_year, \
+                                          pin_month, \
+                                          pin_date,\
+                                          pin_hour,\
+                                          pin_minute,\
+                                          pin_seconds,\
+                                          0,\
+                                          tzinfo=utc)
     our_delivery_datetime = delivery_datetime.astimezone(our_timezone)
 
-
     dpobj, created = DroppedPin.objects.get_or_create(
-        nickname = subject,
-        slug = slugify(subject),
+        title = subject,
         owner_user = smart_unicode(user),
         timestamp = our_delivery_datetime,
         longitude = lng,
         latitude = lat,
+        address = address,
+        zip = zip,
+        city = city,
+        state = state,
+        country = country,
         source_type = "droppedpin"
     )
-
-    reverse_geocode(dpobj)
-
-
-def reverse_geocode(dpobj):
-    kwargs = {}
-    kwargs['lat'] = dpobj.latitude
-    kwargs['lng'] = dpobj.longitude
-    
-    res = utils.get_remote_data(BASE_GEONAMES_URL + urllib.urlencode(kwargs), rformat='json')
-
-    if res.get("stat", "") == "fail":
-        log.error("geonames failed.")
-        log.error("%s" % res.get("stat"))
-        return False
-
-    dpobj.city = res['geonames'][0]['name']
-    dpobj.state = res['geonames'][0]['adminCode1']
-    dpobj.country = res['geonames'][0]['countryCode']
-    dpobj.save()
 
 def logout_and_close_mailbox(M):
     M.expunge()
