@@ -90,7 +90,7 @@ class DroppedPin(Entry, GeolocatedEntryMixin):
 
 
 class DroppedPinAdmin(admin.ModelAdmin):
-    list_display = ('nickname', 'city', 'state', 'latitude', 'longitude',)
+    list_display = ('title', 'city', 'state', 'latitude', 'longitude',)
     date_hierarchy = 'timestamp'
 
 
