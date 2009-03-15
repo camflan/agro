@@ -151,12 +151,13 @@ def handle_email(M, num, user):
     subject = subject.group(1).strip()
     lat,lng = float(lat_long.group(1)), float(lat_long.group(2))
 
+    log.info("working with location: %s (%f, %f)" % (subject, lat, lng))
+
     address, zip, city, state, country = reverse_geocode(lat, lng)
+    print address, zip, city, state, country
 
     if not state:
         return False
-
-    log.info("working with location: %s (%f, %f)" % (subject, lat, lng))
 
     M.noop()  # keep connection alive
 
