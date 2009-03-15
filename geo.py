@@ -34,31 +34,13 @@ def reverse_geocode(lat, lng):
 
     if not res:
         log.error("geonames failed.")
+        print res
         return False
 
-    try:
-        address = "%s %s" % (res['address']['streetNumber'], res['address']['street'])
-    except:
-        address = False
-
-    try:
-        zip = res['address']['postalcode']
-    except:
-        zip = False
-
-    try:
-        city = res['address']['placename']
-    except:
-        city = False
-
-    try:
-        state = res['address']['adminCode1']
-    except:
-        state = False
-
-    try:
-        country = res['address']['countryCode']
-    except:
-        country = False
+    address = "%s %s" % (res['address']['streetNumber'], res['address']['street'])
+    zip = res['address']['postalcode']
+    city = res['address']['placename']
+    state = res['address']['adminCode1']
+    country = res['address']['countryCode']
     return address, zip, city, state, country
 
