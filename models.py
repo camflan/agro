@@ -5,6 +5,7 @@ from agro.sources import import_source_modules
 from tagging.fields import TagField, Tag
 
 NEARBY_ADDRESS_GEONAMES_URL = "http://ws.geonames.org/findNearestAddressJSON?"
+BASE_STATIC_MAP_URL = "http://maps.google.com/staticmap?" 
 
 class Entry(models.Model):
     title           = models.CharField(max_length=200, help_text="Main text, or Title, of your entry.", blank=True)

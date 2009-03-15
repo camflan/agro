@@ -20,10 +20,6 @@ log = logging.getLogger('agro.sources.droppedpin')
 utc = pytz.utc
 our_timezone = pytz.timezone(settings.TIME_ZONE)
 
-NEARBY_ADDRESS_GEONAMES_URL = "http://ws.geonames.org/findNearestAddressJSON?"
-
-BASE_STATIC_MAP_URL = "http://maps.google.com/staticmap?" 
-
 DEFAULT_SUBJECT = "Dropped Pin"  # will be removed from name of location, if nothing else, replaced by city/state
 
 DATE_PATTERN    = r'''
