@@ -3,7 +3,7 @@ import urllib
 
 from agro.sources import utils
 
-NEARBY_ADDRESS_GEONAMES_URL = "http://ws.geonames.org/findNearestAddressJSON?"
+NEARBY_ADDRESS_GEONAMES_URL = "http://ws5.geonames.org/findNearestAddressJSON?"
 log = logging.getLogger('agro.geo')
 
 def reverse_geocode(lat, lng):
