@@ -76,7 +76,7 @@ class DroppedPin(Entry, GeolocatedEntryMixin):
         self.title = self.title.replace(DEFAULT_SUBJECT, "").strip()
 
         if self.title == '':
-            self.title = "%s" % address
+            self.title = "%s" % self.address
 
         super(DroppedPin, self).save(**kwargs)
 
@@ -154,7 +154,6 @@ def handle_email(M, num, user):
     log.info("working with location: %s (%f, %f)" % (subject, lat, lng))
 
     address, zip, city, state, country = reverse_geocode(lat, lng)
-    print address, zip, city, state, country
 
     if not state:
         return False

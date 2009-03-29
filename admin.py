@@ -7,6 +7,7 @@ class EntryAdmin(admin.ModelAdmin):
     list_filter = ('source_type',)
     date_hierarchy = 'timestamp'
 
-admin.site.register(Entry, EntryAdmin)
+#admin.site.register(Entry, EntryAdmin)
+admin.site.register(Entry)
 
 import_source_modules(class_name='Admin')
