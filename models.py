@@ -136,7 +136,7 @@ def create_or_update_entry_for_followed_model(sender, **kwargs):
     title = getattr(instance, 'title', '')
     description = getattr(instance, 'description', '') or getattr(instance, 'body', '')
     url = getattr(instance, 'url', '') or getattr(instance, 'permalink', '')
-    timestamp = getattr(instance, 'created', '')
+    timestamp = getattr(instance, 'created', '') or getattr(instance, 'timestamp', '') or getattr(instance, 'publish', '')
     source_type = instance.__class__.__name__.lower()
 
     content_type = ContentType.objects.get(name=source_type)
