@@ -7,7 +7,7 @@ from django.template import loader, Context, RequestContext
 from agro.models import Entry
 
 
-def entry_list(request, reverse=False, for_type=None, for_user=None, day=None, month=None, year=None, add_to_context=None, template_name="entry_list.html"):
+def entry_list(request, reverse=False, for_type=None, exclude_type=None, for_user=None, day=None, month=None, year=None, add_to_context=None, template_name="entry_list.html"):
     # get all entries first, then we will pair it down
     entries = Entry.objects.all()
 
@@ -19,6 +19,7 @@ def entry_list(request, reverse=False, for_type=None, for_user=None, day=None, m
     if year: entries = entries.filter(timestamp__year=int(year))
 
     if reverse: entries = entries.reverse()
+    if exclude_type: entries.exclude(source_type__icontains=exclude_type)
 
     # our context dictionary, can be built up by other functions that "subclass" this one
     c = dict(
