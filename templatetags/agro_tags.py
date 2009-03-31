@@ -148,7 +148,7 @@ class FormatNode(template.Node):
             elif self.custom_template:
                 self.custom_template = self.custom_template.strip('\"\'')
                 if self.using_dir:
-                    return render_to_string('%s/%s.html' % (self.custom_template,type(object).__name__.lower()), context)
+                    return render_to_string('%s/%s.html' % (self.custom_template, type(object).__name__.lower()), context)
                 return render_to_string(self.custom_template, context)
             else:
                 return ''

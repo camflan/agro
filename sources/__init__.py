@@ -1,9 +1,12 @@
-from django.conf import settings
+from datetime import datetime
 import logging
+import sys
+
+from django.conf import settings
 
 log = logging.getLogger('agro.sources')
 
-tree_modules_to_try =   [ "xml.etree.cElementTree", "elementtree.ElementTree", "cElementTree", ]
+tree_modules_to_try = [ "xml.etree.cElementTree", "elementtree.ElementTree", "cElementTree", ]
 element_tree = None
 
 for tree in tree_modules_to_try:
@@ -37,3 +40,4 @@ def import_source_modules(source_list=settings.AGRO_SETTINGS['source_list'], cla
         except Exception, e:
             log.error('unable to load %s: %s', source, e)
     return sources
+

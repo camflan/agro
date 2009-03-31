@@ -1,8 +1,15 @@
+import logging
+
 from django.db import models
+from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes import generic
 
 from agro.managers import EntryManager
 from agro.sources import import_source_modules
 from tagging.fields import TagField, Tag
+
+log = logging.getLogger('agro.models')
 
 NEARBY_ADDRESS_GEONAMES_URL = "http://ws.geonames.org/findNearestAddressJSON?"
 BASE_STATIC_MAP_URL = "http://maps.google.com/staticmap?" 
@@ -14,6 +21,12 @@ class Entry(models.Model):
     owner_user      = models.CharField(max_length=200, help_text="Here we store the username used for the webservice, for this entry.", blank=True)
     url             = models.URLField(verify_exists=False, help_text="URL back to the original item.", blank=True)
     source_type     = models.CharField(max_length=200, help_text="Type of entry.", blank=True)
+
+
+    # we will need these for external models that we want to follow.
+    content_type = models.ForeignKey(ContentType, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
 
     objects         = EntryManager()
     tags            = TagField()
@@ -33,7 +46,10 @@ class Entry(models.Model):
 
     @property
     def object(self):
-        return getattr(self, self.source_type)
+        try:
+            return getattr(self, self.source_type)
+        except:
+            return self.content_object
 
     def _get_tags(self):
         return Tag.objects.get_for_object(self)
@@ -93,5 +109,56 @@ class GeolocatedEntryMixin(models.Model):
         kwargs['markers'] = "%s,%s,%s" % (self.latitude, self.longitude, color)
 
         return BASE_STATIC_MAP_URL + urllib.urlencode(kwargs)
+
+def setup_signal_connection(module, model_to_follow, **kwargs):
+    try:
+        try:
+            model_module = __import__(module, {}, {}, list(model_to_follow), -1)
+        except:
+            log.info("trying again")
+            model_module = __import__(module, {}, {}, list(model_to_follow))
+    except ImportError, e:
+        log.error("%s" % e)
+        raise
+    except Exception, e:
+        log.error("%s" % e)
+        raise
+
+    models.signals.post_save.connect(create_or_update_entry_for_followed_model, sender=eval("model_module.%s" % model_to_follow))
+
+def create_or_update_entry_for_followed_model(sender, **kwargs):
+    try:
+        instance = kwargs['instance']
+    except Exception, e:
+        log.error('%s', e)
+        return
+
+    title = getattr(instance, 'title', '')
+    description = getattr(instance, 'description', '') or getattr(instance, 'body', '')
+    url = getattr(instance, 'url', '') or getattr(instance, 'permalink', '')
+    timestamp = getattr(instance, 'created', '')
+    source_type = instance.__class__.__name__.lower()
+
+    content_type = ContentType.objects.get(name=source_type)
+
+    e, created = Entry.objects.get_or_create(
+                                        content_type=content_type,
+                                        object_id=instance.pk,
+                                        source_type=source_type,
+                                        url=url,
+                                        title=title,
+                                        description=description,
+                                        timestamp=timestamp
+                                   )
+
+
+try:
+    for module, model_to_follow in settings.AGRO_SETTINGS['following']:
+        setup_signal_connection(module, model_to_follow)
+except KeyError, e:
+    log.warn("keyerror: %s. We must not be following any models external to agro." % e)
+except Exception, e:
+    log.error("%s" % e)
+    raise
 
 import_source_modules()
