@@ -21,6 +21,8 @@ class Entry(models.Model):
     owner_user      = models.CharField(max_length=200, help_text="Here we store the username used for the webservice, for this entry.", blank=True)
     url             = models.URLField(verify_exists=False, help_text="URL back to the original item.", blank=True)
     source_type     = models.CharField(max_length=200, help_text="Type of entry.", blank=True)
+    allow_comments  = models.NullBooleanField(default=False)
+    
 
 
     # we will need these for external models that we want to follow.
