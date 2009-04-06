@@ -147,11 +147,12 @@ def create_or_update_entry_for_followed_model(sender, **kwargs):
                                         content_type=content_type,
                                         object_id=instance.pk,
                                         source_type=source_type,
-                                        url=url,
                                         title=title,
-                                        description=description,
                                         timestamp=timestamp
                                    )
+    e.url=url
+    e.description=description
+    e.save()
 
 
 try:
