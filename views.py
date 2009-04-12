@@ -19,10 +19,11 @@ def entry_list(request, reverse=False, for_type=None, exclude_type=None, for_use
     if year: entries = entries.filter(timestamp__year=int(year))
 
     if reverse: entries = entries.reverse()
-    if exclude_type: entries.exclude(source_type__icontains=exclude_type)
+    if exclude_type: entries = entries.exclude(source_type__icontains=exclude_type)
 
     # our context dictionary, can be built up by other functions that "subclass" this one
     c = dict(
+        type = for_type,
         entries = entries,
     )
     if add_to_context:
