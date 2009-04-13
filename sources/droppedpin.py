@@ -4,6 +4,7 @@ import logging
 import pytz
 import re
 import urllib
+import vobject
 
 from django.conf import settings
 from django.db import models
@@ -57,10 +58,21 @@ GMAPS_LL_PATTERN= r'''
                    https?://maps.google.com/maps\?f=q\&q=   # base URL
                    (-?[\d.]{4,10})                          # latitude (comes first in URL)
                    ,                                        # comma seperated
-                   (-?[\d.]{4,10})                          # longitude (comes first in URL)
+                   (-?[\d.]{4,10})                          # longitude (comes last in URL)
                    .*\s                                     # rest of the URL
 
                   '''
+
+VCARD_GMAPS_PATTERN = r'''
+                   q&q=                     # start of lat long
+                   ([-\w\.]*)               # latitude (comes first in URL)
+                   ,                        # comma separated
+                   ([-\w\.]*)               # longitude (comes last in URL)
+                  '''
+
+VCARD_PATTERN   = r'''
+                   BEGIN:VCARD.*END:VCARD
+                   '''
 
 
 MONTH_TO_NUM = {'jan':1, 'feb':2, 'mar':3, 'apr':4, 'may':5, 'jun':6, 'jul':7, 'aug':8, 'sep':9, 'oct':10, 'nov':11, 'dec':12,}
@@ -131,8 +143,8 @@ def retrieve(force, **args):
 
     for num in data[0].split():
         success = handle_email(M, num, username)
-        if success and delete_on_import:
-            M.store(num, '+FLAGS', '\\Deleted')
+        #if success and delete_on_import:
+        #    M.store(num, '+FLAGS', '\\Deleted')
 
     logout_and_close_mailbox(M)
 
@@ -140,14 +152,23 @@ def handle_email(M, num, user):
     typ, data = M.fetch(num, '(RFC822)')
     message, flags = data[0][1], data[1]
 
+    vcard_compiled_pattern = re.compile(VCARD_PATTERN, re.VERBOSE | re.DOTALL | re.MULTILINE)
     subject_compiled_pattern = re.compile(SUBJECT_PATTERN, re.VERBOSE)
-    lat_long_compiled_pattern = re.compile(GMAPS_LL_PATTERN, re.VERBOSE)
     date_compiled_pattern = re.compile(DATE_PATTERN, re.VERBOSE)
+
+    # in iPhone 3.0, these locations are sent as vcards, so if
+    # we find one then we'll extract the url from the vcard
+    vcard = re.search(vcard_compiled_pattern, message)
+    if vcard:
+        lat_long_compiled_pattern = re.compile(VCARD_GMAPS_PATTERN, re.VERBOSE)
+        vcard = vobject.readOne(vcard.group(0))
+        lat_long = re.search(lat_long_compiled_pattern, vcard.url.value)
+    else:
+        lat_long_compiled_pattern = re.compile(GMAPS_LL_PATTERN, re.VERBOSE)
+        lat_long = re.search(lat_long_compiled_pattern, message)
 
     subject = re.search(subject_compiled_pattern, message)
     delivery_date = re.search(date_compiled_pattern, message)
-    lat_long = re.search(lat_long_compiled_pattern, message)
-
     subject = subject.group(1).strip()
     lat,lng = float(lat_long.group(1)), float(lat_long.group(2))
 
