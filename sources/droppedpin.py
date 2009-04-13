@@ -143,8 +143,8 @@ def retrieve(force, **args):
 
     for num in data[0].split():
         success = handle_email(M, num, username)
-        #if success and delete_on_import:
-        #    M.store(num, '+FLAGS', '\\Deleted')
+        if success and delete_on_import:
+            M.store(num, '+FLAGS', '\\Deleted')
 
     logout_and_close_mailbox(M)
 
