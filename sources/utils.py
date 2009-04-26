@@ -2,6 +2,7 @@ import httplib2
 import dateutil.parser
 import dateutil.tz
 import logging
+import feedparser
 from agro.sources import *
 from django.utils import simplejson
 from django.utils.encoding import force_unicode
@@ -31,6 +32,8 @@ def get_remote_data(url, method="GET", rformat="xml", username=None, password=No
         return element_tree.fromstring(content)
     elif rformat is "json":
         return simplejson.loads(content)
+    elif rformat is "atom":
+        return feedparser.parse(content)
 
 # these are taken from JKM's jellyroll
 # http://code.google.com/p/jellyroll/
