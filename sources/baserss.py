@@ -67,8 +67,7 @@ def retrieve(force, **args):
                     timestamp = dt,
                     title = entry['title'],
                     source_type = 'dailymile',
-                    defaults = {'description':"",
-                                'url':entry['link'],
+                    defaults = {'url':entry['link'],
                                 'owner_user':username,
                         }
                 )
