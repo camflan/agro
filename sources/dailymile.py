@@ -30,12 +30,16 @@ def retrieve(force, **args):
         'model': DailyMile,
         'url': 'http://www.dailymile.com/people/%s/entries.atom' % args['account'],
         'feedtype': 'atom',
-        'processors': {'title': title_processor,},
+        'processors': {'title': title_processor,
+                       'description': description_processor,},
     }
     args = dict(args, **more_args)
     super_retrieve(force, **args) 
     log.debug("done with retrieve")
 
+def description_processor(s):
+    s = re.sub('(.*)(<h3.*>.*</h3>)?(.*)<dl class.*', '\g<1>', s)
+    return s
 
 def title_processor(s):
     s = re.sub('(.*)(\sposted a \w+\sworkout)', 'I\g<2>.', s)

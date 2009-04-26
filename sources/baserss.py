@@ -61,25 +61,17 @@ def retrieve(force, **args):
             if rformat == 'atom':
                 dt = datetime.datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
             if dt > last_update:
-                log.info("working with bookentry => %s" % entry['title'])
+                log.info("working with entry => %s" % entry['title'])
 
                 model_entry, created = MODEL.objects.get_or_create(
                     timestamp = dt,
-                    url = entry['link'],
                     title = entry['title'],
-                    owner_user = username,
                     source_type = 'dailymile',
-                    defaults = {'description':""}
+                    defaults = {'description':"",
+                                'url':entry['link'],
+                                'owner_user':username,
+                        }
                 )
-
-                try:
-                    for k,v in processors.iteritems():
-                        try:
-                            setattr(model_entry, k, v(getattr(model_entry, k)))
-                        except:
-                            raise
-                except Exception, e:
-                    log.warn("%s", e)
 
                 if rformat == 'atom':
                     model_entry.description = entry['content'][0].value
@@ -91,6 +83,15 @@ def retrieve(force, **args):
                         except Exception, e:
                             log.error("%s", e)
                             log.warn("Unable to set %s", tag)
+
+                try:
+                    for k,v in processors.iteritems():
+                        try:
+                            setattr(model_entry, k, v(getattr(model_entry, k)))
+                        except:
+                            raise
+                except Exception, e:
+                    log.warn("%s", e)
 
                 try:
                     model_entry.save()

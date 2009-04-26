@@ -52,7 +52,6 @@ def retrieve(force, **args):
     else:
         marks = utils.get_remote_data(url, rformat=rformat)
 
-    print marks
     if marks:
         for mark in marks:
             if password and force:
