@@ -32,6 +32,7 @@ def retrieve(force, **args):
         url = args['url']
         MODEL = args['model']
         rss_tags = args['tags']
+        source_type = args['source_type']
 
         if 'feedtype' in args.keys():
             rformat = args['feedtype']
@@ -66,7 +67,7 @@ def retrieve(force, **args):
                 model_entry, created = MODEL.objects.get_or_create(
                     timestamp = dt,
                     title = entry['title'],
-                    source_type = 'dailymile',
+                    source_type = source_type,
                 )
 
                 model_entry.url=entry['link'],

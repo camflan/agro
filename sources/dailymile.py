@@ -26,6 +26,7 @@ class DailyMile(BaseRSS):
 # retrieve function
 def retrieve(force, **args):
     more_args = {
+        'source_type': 'dailymile',
         'tags': ['distance', 'duration', 'felt'],
         'model': DailyMile,
         'url': 'http://www.dailymile.com/people/%s/entries.atom' % args['account'],
