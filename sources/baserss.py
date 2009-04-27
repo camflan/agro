@@ -67,10 +67,10 @@ def retrieve(force, **args):
                     timestamp = dt,
                     title = entry['title'],
                     source_type = 'dailymile',
-                    defaults = {'url':entry['link'],
-                                'owner_user':username,
-                        }
                 )
+
+                model_entry.url=entry['link'],
+                model_entry.owner_user=username,
 
                 if rformat == 'atom':
                     model_entry.description = entry['content'][0].value
