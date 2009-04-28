@@ -34,10 +34,11 @@ def retrieve(force, **args):
         rss_tags = args['tags']
         source_type = args['source_type']
 
-        if 'feedtype' in args.keys():
-            rformat = args['feedtype']
     except Exception, e:
         raise
+
+    if 'feedtype' in args.keys():
+        rformat = args['feedtype']
 
     if rformat == 'atom':
         dateparse = iso8601.parse_date
@@ -60,6 +61,8 @@ def retrieve(force, **args):
         for entry in e['entries']:
             dt = dateparse(entry['published'])
             if rformat == 'atom':
+                # these are time-zone aware, where everything else is time-zone naive,
+                # to compare, we must strip the TZ
                 dt = datetime.datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
             if dt > last_update:
                 log.info("working with entry => %s" % entry['title'])
@@ -70,8 +73,8 @@ def retrieve(force, **args):
                     source_type = source_type,
                 )
 
-                model_entry.url=entry['link'],
-                model_entry.owner_user=username,
+                model_entry.url = entry['link']
+                model_entry.owner_user = username
 
                 if rformat == 'atom':
                     model_entry.description = entry['content'][0].value
@@ -79,10 +82,11 @@ def retrieve(force, **args):
                 if rss_tags:
                     for tag in rss_tags:
                         try:
-                            setattr(model_entry, tag, entry[tag])
+                            setattr(model_entry, "%s" % tag, entry[tag])
                         except Exception, e:
                             log.error("%s", e)
                             log.warn("Unable to set %s", tag)
+                            raise
 
                 try:
                     for k,v in processors.iteritems():
