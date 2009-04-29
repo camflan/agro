@@ -31,8 +31,8 @@ def retrieve_data_updates(opts=None, args=None):
 
         base_name = s.__name__[s.__name__.rfind('.')+1:]
 
-        if base_name in settings.AGRO_SETTINGS['advanced'].keys():
-            args['advanced'] = settings.AGRO_SETTINGS['advanced'][base_name]
+        # if base_name in settings.AGRO_SETTINGS['advanced'].keys():
+        #     args['advanced'] = settings.AGRO_SETTINGS['advanced'][base_name]
 
         if base_name in settings.AGRO_SETTINGS['api_keys'].keys():
             args['api_key'] = settings.AGRO_SETTINGS['api_keys'][base_name]
