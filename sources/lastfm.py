@@ -98,7 +98,8 @@ def _handle_song(song, dt, user_name):
     images = song.findall('image')
 
     for image in images:
-        imageset[image.get('size')] = image.text
+        if not image.text == "None":
+            imageset[image.get('size')] = image.text
 
     try:
         s, created = Song.objects.get_or_create(
