@@ -6,6 +6,17 @@ from django.template import loader, Context, RequestContext
 
 from agro.models import Entry
 
+def entry_detail(request, entry_id=0, template_name="entry_detail.html"):
+    entry = get_object_or_404(entry_id)
+
+    assert False
+
+    c = dict(
+        entry = entry,
+        object = entry.object
+    )
+    return render_to_response(template_name, c, context_instance=RequestContext(request))
+
 
 def entry_list(request, reverse=False, for_type=None, exclude_type=None, for_user=None, day=None, month=None, year=None, add_to_context=None, template_name="entry_list.html"):
     # get all entries first, then we will pair it down
@@ -13,10 +24,10 @@ def entry_list(request, reverse=False, for_type=None, exclude_type=None, for_use
 
     if for_user: entries = entries.filter(owner_user__username__icontains=for_user)
     if for_type: entries = entries.filter(source_type__icontains=for_type)
-    
-    if day: entries = entries.filter(timestamp__day=int(day))
-    if month: entries = entries.filter(timestamp__month=int(month))
-    if year: entries = entries.filter(timestamp__year=int(year))
+
+    if year: entries = entries.filter(timestamp__year=year)
+    if month: entries = entries.filter(timestamp__month=month)
+    if day: entries = entries.filter(timestamp__day=day)
 
     if reverse: entries = entries.reverse()
     if exclude_type: entries = entries.exclude(source_type__icontains=exclude_type)

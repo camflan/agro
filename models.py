@@ -22,8 +22,6 @@ class Entry(models.Model):
     url             = models.URLField(verify_exists=False, help_text="URL back to the original item.", blank=True)
     source_type     = models.CharField(max_length=200, help_text="Type of entry.", blank=True)
     allow_comments  = models.NullBooleanField(default=False)
-    
-
 
     # we will need these for external models that we want to follow.
     content_type = models.ForeignKey(ContentType, null=True, blank=True)
