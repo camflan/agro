@@ -53,7 +53,7 @@ class SongAdmin(admin.ModelAdmin):
 def retrieve(force, **args):
     username        = args['account']
     api_key,secret  = args['api_key']
-    url             = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=%s&api_key=%s&limit=%s" % (username, api_key, 1000)
+    url             = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=%s&api_key=%s&limit=%s" % (username, api_key, 200)
     song_resp       = utils.get_remote_data(url)
 
     last_update = datetime.datetime.fromtimestamp(0)
