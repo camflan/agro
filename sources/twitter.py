@@ -10,7 +10,7 @@ log = logging.getLogger('agro.sources.twitter')
 
 # model definition
 class Tweet(Entry):
-    tweet_id    = models.IntegerField(null=True, blank=True, help_text="This is the id assigned to each tweet by twitter." )
+    tweet_id    = models.BigIntegerField(null=True, blank=True, help_text="This is the id assigned to each tweet by twitter." )
     source      = models.TextField(blank=True, null=True, )
 
     class Meta:
