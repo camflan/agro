@@ -53,7 +53,7 @@ class SongAdmin(admin.ModelAdmin):
 def retrieve(force, **args):
     username        = args['account']
     api_key,secret  = args['api_key']
-    url             = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=%s&api_key=%s&limit=%s" % (username, api_key, 1000)
+    url             = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=%s&api_key=%s&limit=%s" % (username, api_key, 200)
     song_resp       = utils.get_remote_data(url)
 
     last_update = datetime.datetime.fromtimestamp(0)
@@ -98,7 +98,8 @@ def _handle_song(song, dt, user_name):
     images = song.findall('image')
 
     for image in images:
-        imageset[image.get('size')] = image.text
+        if not image.text == "None":
+            imageset[image.get('size')] = image.text
 
     try:
         s, created = Song.objects.get_or_create(
